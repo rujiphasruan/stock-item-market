@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>วัตถุดิบ (Firebase)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="css.css" rel="stylesheet" type="text/css" />
+  <!-- Use compat libs for simpler code (put the latest versions if you want) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body { font-family: Arial, sans-serif; margin:0; padding:0; }
+    .header { position:fixed; top:0; left:0; right:0; background:#ff9800; color:#fff; padding:12px; text-align:center; font-size:18px; font-weight:bold; z-index:100; }
+    .navbar { position:fixed; bottom:0; left:0; right:0; background:#ff9800; display:flex; justify-content:space-around; padding:10px 0; z-index:100; }
+    .navbar button { border:none; background:none; font-size:14px; color:#fff; cursor:pointer; display:flex; flex-direction:column; align-items:center; }
+    .navbar button:hover { opacity:0.8; }
+    .grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; padding:10px; margin-top:60px; margin-bottom:70px; }
+    .card { border:1px solid #ccc; border-radius:8px; text-align:center; padding:10px; cursor:pointer; }
+    .card img { max-width:100%; height:100px; object-fit:cover; border-radius:8px; }
+    .popup { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:1000; }
+    .popup-content { background:#fff; padding:20px; border-radius:8px; width:300px; max-height:90vh; overflow:auto; position:relative; }
+    .popup-content img { max-width:100%; height:120px; object-fit:contain; }
+    .btn { margin:5px 0; padding:8px; border:none; border-radius:6px; cursor:pointer; width:100%; }
+    .btn-withdraw { background:#f44336; color:#fff; }
+    .btn-add { background:#4caf50; color:#fff; }
+    .btn-edit { background:#2196f3; color:#fff; }
+    .btn-delete { background:#9c27b0; color:#fff; }
+    .add-btn { position:fixed; bottom:70px; right:20px; background:#ff5722; color:#fff; font-size:28px; border:none; border-radius:50%; width:55px; height:55px; cursor:pointer; z-index:1001; }
+    .add-btn:hover { opacity:0.9; }
+    .log-table { width:100%; border-collapse:collapse; margin-top:10px; }
+    .log-table th, .log-table td { border:1px solid #ddd; padding:5px; font-size:13px; text-align:center; }
+    .log-table th { background:#f2f2f2; }
+    .page { padding:10px; margin-top:60px; margin-bottom:70px; }
+    #summaryChart { width: 50%; margin: 0 auto; display: block; }
+    @media (max-width: 600px) {
+      .grid { grid-template-columns: 1fr; }
+      .header { font-size: 16px; padding: 10px; }
+      .navbar button { font-size: 12px; }
+      .popup-content { width: 90%; }
+      #summaryChart { width: 100% !important; }
+    }
+  </style>
+</head>
+<body>
+  <!-- หน้าวัตถุดิบ -->
+  <div id="pageIndex">
+    <div class="header">สต็อกสินค้า</div>
+    <div class="grid" id="itemsGrid"></div>
+    <button class="add-btn" onclick="openAddItemForm()">+</button>
+  </div>
+
+  <!-- หน้าบันทึกเวลา -->
+  <div id="pageLogs" style="display:none;">
+    <div class="header">บันทึกเวลา</div>
+    <div class="page">
+      <div id="logsContainer"></div>
+    </div>
+  </div>
+
+  <!-- หน้าสรุป -->
+  <div id="pageSummary" style="display:none;">
+    <div class="header">สรุป</div>
+    <div class="page" style="text-align:center;">
+      <canvas id="summaryChart"></canvas>
+      <div id="summaryDetails" style="margin-top:15px; text-align:left;"></div>
+      <div style="margin-top:10px;">
+        <button class="btn" onclick="resetAllData()" style="background:#ff7043;color:#fff;">รีเซ็ตข้อมูล (ล้างทั้งหมด)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navbar -->
+  <div class="navbar">
+    <button onclick="showPage('pageIndex')">📦<span>วัตถุดิบ</span></button>
+    <button onclick="showPage('pageLogs')">⏰<span>บันทึกเวลา</span></button>
+    <button onclick="showPage('pageSummary')">📊<span>สรุป</span></button>
+  </div>
+
+  <!-- Popup Info -->
+  <div class="popup" id="popup" onclick="outsideClick(event)">
+    <div class="popup-content">
+      <span onclick="closePopup()" style="position:absolute; top:10px; right:15px; cursor:pointer; color:red; font-weight:bold; font-size:20px;">✖</span>
+      <h3 id="itemName"></h3>
+      <p id="itemCode" style="font-size:13px;color:#555;"></p>
+      <img id="itemImage" src="">
+      <p id="stockDisplay"></p>
+      <button class="btn btn-withdraw" onclick="withdrawStock()">เบิกสินค้า</button>
+      <button class="btn btn-add" onclick="addStock()">เติมสต็อก</button>
+      <button class="btn btn-edit" onclick="editImage()">แก้ไขรูปภาพ</button>
+      <button class="btn btn-delete" onclick="deleteItem()">ลบสินค้า</button>
+      <h4>ประวัติการเปลี่ยนแปลง</h4>
+      <table class="log-table" id="logTable">
+        <thead><tr><th>วันที่เวลา</th><th>รายการ</th><th>จำนวน</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Popup Add Item -->
+  <div class="popup" id="addItemPopup" onclick="outsideClickAdd(event)">
+    <div class="popup-content">
+      <span onclick="closeAddItemForm()" style="position:absolute; top:10px; right:15px; cursor:pointer; color:red; font-weight:bold; font-size:20px;">✖</span>
+      <h3>เพิ่มสินค้าใหม่</h3>
+      <p>ชื่อสินค้า:</p>
+      <input type="text" id="newItemName" style="width:100%;padding:5px;">
+      <p>เลือกรูปภาพ (ไม่ใส่ก็ได้):</p>
+      <input type="file" id="newItemImage" accept="image/*">
+      <br><br>
+      <button class="btn btn-add" onclick="saveNewItem()">บันทึก</button>
+    </div>
+  </div>
+
+<script>
+/* ========== Firebase setup - ใส่คอนฟิกของคุณที่นี่ ========== 
+   ให้เข้า Firebase Console > Project settings > SDK setup and config
+   แล้วแทนที่ค่าใน firebaseConfig ด้านล่าง
+*/
+const firebaseConfig = {
+  apiKey: "AIzaSyDlLaGNz20bTCooXnNIvy0CVXS72KwWSg8",
+  authDomain: "market-stock-d2a9c.firebaseapp.com",
+  databaseURL: "https://market-stock-d2a9c-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "market-stock-d2a9c",
+  storageBucket: "market-stock-d2a9c.appspot.com",  
+  messagingSenderId: "969837887139",
+  appId: "1:969837887139:web:cff417acc4ab0f8cd4c916",
+  measurementId: "G-VTND76GE7K"
+};
+
+// init firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const rootRef = db.ref('inventoryApp'); // เก็บข้อมูลทั้งหมดไว้ที่ path นี้
+
+// Local mirrors (will be synced from Firebase)
+let stock = {};
+let logs = {};
+let images = {};
+let itemCodes = {};
+let lastItemId = 0;
+
+let stockMax = 100;
+let currentItem = null;
+let summaryChart = null;
+
+/* ---------- First-run initialization on Firebase ----------
+   If no 'initialized' flag in DB, we perform a one-time clear/initialize
+   (This matches previous localStorage behavior where we cleared on first open.)
+*/
+function ensureInitialized() {
+  rootRef.child('initialized').once('value', snap => {
+    const isInit = snap.exists() && snap.val() === true;
+    if (!isInit) {
+      // Set empty structures on DB and set initialized flag
+      rootRef.set({
+        stock: {},
+        logs: {},
+        images: {},
+        itemCodes: {},
+        lastItemId: 0,
+        initialized: true
+      }, err => {
+        if (err) console.error('Firebase init error:', err);
+        else console.log('Firebase initialized with empty data.');
+        // listener below will pick up values and render
+      });
+    }
+  });
+}
+
+/* ---------- Real-time listener ----------
+   Keep local variables in sync with Firebase.
+   Whenever DB changes, update local state and UI.
+*/
+rootRef.on('value', snap => {
+  const v = snap.val() || {};
+  stock = v.stock || {};
+  logs = v.logs || {};
+  images = v.images || {};
+  itemCodes = v.itemCodes || {};
+  lastItemId = v.lastItemId || 0;
+  // render UI
+  renderItems();
+  // if currently on logs or summary pages, re-render
+  if (document.getElementById('pageLogs').style.display !== 'none') renderAllLogs();
+  if (document.getElementById('pageSummary').style.display !== 'none') renderSummary();
+});
+
+/* ---------- Save function ----------
+   Update Firebase with current local state.
+   We call this after any change.
+*/
+function saveData(){
+  rootRef.update({
+    stock: stock,
+    logs: logs,
+    images: images,
+    itemCodes: itemCodes,
+    lastItemId: lastItemId
+  }, err => {
+    if (err) console.error('saveData error:', err);
+  });
+}
+
+/* ---------- Reset all data (button) ----------
+   Provides an in-UI way to wipe DB and reinitialize.
+*/
+function resetAllData(){
+  if (!confirm('คุณแน่ใจจะล้างข้อมูลทั้งหมดใน Firebase ใช่หรือไม่?')) return;
+  rootRef.set({
+    stock: {},
+    logs: {},
+    images: {},
+    itemCodes: {},
+    lastItemId: 0,
+    initialized: true
+  }, err => {
+    if (err) alert('ล้มเหลวในการรีเซ็ต: ' + err);
+    else alert('รีเซ็ตข้อมูลเรียบร้อยแล้ว');
+  });
+}
+
+/* ---------- UI logic (เหมือนของเดิม) ---------- */
+function renderItems(){
+  let grid = document.getElementById("itemsGrid");
+  grid.innerHTML = "";
+  for(let item in stock){
+    let div = document.createElement("div");
+    div.className = "card";
+    div.onclick = () => openPopup(item);
+    const imgSrc = images[item] || "https://cdn-icons-png.flaticon.com/512/679/679720.png";
+    div.innerHTML = `<img src="${imgSrc}"><p>${item}</p>`;
+    grid.appendChild(div);
+  }
+}
+
+function openPopup(item){
+  currentItem = item;
+  document.getElementById("itemName").innerText = item;
+  document.getElementById("itemCode").innerText = "รหัสสินค้า: " + (itemCodes[item] || "");
+  document.getElementById("itemImage").src = images[item] || "https://cdn-icons-png.flaticon.com/512/679/679720.png";
+  updateStockDisplay(item);
+  renderLogs(item);
+  document.getElementById("popup").style.display = "flex";
+}
+function closePopup(){ document.getElementById("popup").style.display = "none"; }
+function outsideClick(e){ if(e.target.id==="popup") closePopup(); }
+
+function updateStockDisplay(item){
+  const amount = (typeof stock[item] !== 'undefined') ? stock[item] : 0;
+  document.getElementById("stockDisplay").innerText = "สต็อกปัจจุบัน: " + amount + "/" + stockMax;
+}
+
+function renderLogs(item){
+  let tbody = document.querySelector("#logTable tbody");
+  tbody.innerHTML = "";
+  const itemLogs = logs[item] || [];
+  itemLogs.forEach(l => {
+    let tr = document.createElement("tr");
+    tr.innerHTML = `<td>${l.dt}</td><td>${l.type}</td><td>${l.amt}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function withdrawStock(){
+  let qty = parseInt(prompt("กรอกจำนวนที่ต้องการเบิก:"));
+  if(isNaN(qty) || qty <= 0) return alert("จำนวนไม่ถูกต้อง");
+  if((stock[currentItem] || 0) < qty) return alert("สต็อกไม่พอ!");
+  stock[currentItem] = (stock[currentItem] || 0) - qty;
+  let now = new Date().toLocaleString();
+  logs[currentItem] = logs[currentItem] || [];
+  logs[currentItem].unshift({dt: now, type:"เบิกสินค้า", amt: "-"+qty});
+  saveData();
+  updateStockDisplay(currentItem);
+  renderLogs(currentItem);
+}
+
+function addStock(){
+  let qty = parseInt(prompt("กรอกจำนวนที่จะเติมเข้าสต็อก:"));
+  if(isNaN(qty) || qty <= 0) return alert("จำนวนไม่ถูกต้อง");
+  if((stock[currentItem] || 0) + qty > stockMax) return alert("เกินความจุสูงสุด!");
+  stock[currentItem] = (stock[currentItem] || 0) + qty;
+  let now = new Date().toLocaleString();
+  logs[currentItem] = logs[currentItem] || [];
+  logs[currentItem].unshift({dt: now, type:"เติมสต็อก", amt: "+"+qty});
+  saveData();
+  updateStockDisplay(currentItem);
+  renderLogs(currentItem);
+}
+
+function openAddItemForm(){ document.getElementById("addItemPopup").style.display="flex"; }
+function closeAddItemForm(){ document.getElementById("addItemPopup").style.display="none"; }
+function outsideClickAdd(e){ if(e.target.id==="addItemPopup") closeAddItemForm(); }
+
+function saveNewItem(){
+  let name = document.getElementById("newItemName").value.trim();
+  let file = document.getElementById("newItemImage").files[0];
+  if(!name) return alert("กรุณากรอกชื่อสินค้า");
+  // Assign code if not existing
+  if(!itemCodes[name]){
+    lastItemId++;
+    itemCodes[name] = "P" + String(lastItemId).padStart(4,"0");
+  }
+  // Initialize structures if missing
+  images[name] = images[name] || null;
+  stock[name] = stock[name] || 0;
+  logs[name] = logs[name] || [];
+
+  if(file){
+    let reader = new FileReader();
+    reader.onload = function(e){
+      images[name] = e.target.result;
+      saveData();
+      renderItems();
+      closeAddItemForm();
+    };
+    reader.readAsDataURL(file);
+  } else {
+    images[name] = images[name] || "https://cdn-icons-png.flaticon.com/512/679/679720.png";
+    saveData();
+    renderItems();
+    closeAddItemForm();
+  }
+}
+
+function editImage(){
+  let input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.onchange = e => {
+    let file = e.target.files[0];
+    if(file){
+      let reader = new FileReader();
+      reader.onload = ev => {
+        images[currentItem] = ev.target.result;
+        saveData();
+        document.getElementById("itemImage").src = images[currentItem];
+        renderItems();
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  input.click();
+}
+
+function deleteItem(){
+  if(!confirm("คุณต้องการลบสินค้า '"+currentItem+"' ใช่หรือไม่?")) return;
+  delete stock[currentItem];
+  delete logs[currentItem];
+  delete images[currentItem];
+  delete itemCodes[currentItem];
+  saveData();
+  renderItems();
+  closePopup();
+}
+
+function renderAllLogs(){
+  let container = document.getElementById("logsContainer");
+  container.innerHTML = "";
+  for(let item in logs){
+    let section = document.createElement("div");
+    section.style.marginBottom = "20px";
+    section.innerHTML = `<h3>${item} (${itemCodes[item]||''})</h3>`;
+    const itemLogs = logs[item] || [];
+    if(itemLogs.length === 0){
+      section.innerHTML += `<p>ยังไม่มีข้อมูล</p>`;
+    } else {
+      let table = document.createElement("table");
+      table.className = "log-table";
+      table.innerHTML = `<thead><tr><th>วันที่เวลา</th><th>รายการ</th><th>จำนวน</th></tr></thead>
+        <tbody>${itemLogs.map(l=>`<tr><td>${l.dt}</td><td>${l.type}</td><td>${l.amt}</td></tr>`).join('')}</tbody>`;
+      section.appendChild(table);
+    }
+    container.appendChild(section);
+  }
+}
+
+function renderSummary(){
+  let labels = [];
+  let withdrawData = [];
+  let addData = [];
+  let detailsHTML = "";
+  for(let item in logs){
+    labels.push(item);
+    let withdrawSum = 0;
+    let addSum = 0;
+    (logs[item]||[]).forEach(l => {
+      let amt = parseInt(String(l.amt).replace("+","").replace("-","")) || 0;
+      if(l.type === "เบิกสินค้า") withdrawSum += amt;
+      if(l.type === "เติมสต็อก") addSum += amt;
+    });
+    withdrawData.push(withdrawSum);
+    addData.push(addSum);
+    detailsHTML += `<h3>${item} (${itemCodes[item] || ''})</h3>
+      <p>ยอดเบิกรวม: ${withdrawSum}</p>
+      <p>ยอดเติมรวม: ${addSum}</p><hr>`;
+  }
+  document.getElementById("summaryDetails").innerHTML = detailsHTML;
+  let ctx = document.getElementById("summaryChart").getContext("2d");
+  if(summaryChart) summaryChart.destroy();
+  summaryChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'เบิกสินค้า', data: withdrawData, backgroundColor: 'rgba(244, 67, 54, 0.7)' },
+        { label: 'เติมสต็อก', data: addData, backgroundColor: 'rgba(76, 175, 80, 0.7)' }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'top' }, title: { display: true, text: 'สรุปการเบิก-เติมสินค้า' } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+}
+
+function showPage(page){
+  document.getElementById("pageIndex").style.display = "none";
+  document.getElementById("pageLogs").style.display = "none";
+  document.getElementById("pageSummary").style.display = "none";
+  document.getElementById(page).style.display = "block";
+  if(page==="pageLogs") renderAllLogs();
+  if(page==="pageSummary") renderSummary();
+}
+
+/* ---------- Initialize ----------
+   Ensure DB init, then render initial items (listener will populate)
+*/
+ensureInitialized();
+renderItems();
+
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

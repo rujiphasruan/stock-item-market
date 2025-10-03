@@ -1,0 +1,195 @@
+/* ฟอนต์และพื้นหลัง */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #f9f9fb;
+  color: #333;
+}
+
+/* Header bar */
+.header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  background: linear-gradient(90deg, #ff9800, #ff7043);
+  color: #fff;
+  padding: 14px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  z-index: 100;
+  letter-spacing: 0.5px;
+}
+
+/* Navbar ล่าง */
+.navbar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: #fff;
+  display: flex;
+  justify-content: space-around;
+  padding: 8px 0;
+  border-top: 1px solid #ddd;
+  z-index: 100;
+}
+.navbar button {
+  border: none;
+  background: none;
+  font-size: 14px;
+  color: #666;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: color 0.2s ease;
+}
+.navbar button:hover {
+  color: #ff7043;
+}
+.navbar button span {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* กริดสินค้า */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  padding: 12px;
+  margin-top: 70px;
+  margin-bottom: 80px;
+}
+.card {
+  border: none;
+  border-radius: 12px;
+  text-align: center;
+  padding: 12px;
+  cursor: pointer;
+  background: #fff;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.08);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+}
+.card img {
+  max-width: 100%;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+.card p {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+/* Floating Add Button */
+.add-btn {
+  position: fixed;
+  bottom: 85px; right: 20px;
+  background: #ff5722;
+  color: #fff;
+  font-size: 32px;
+  border: none;
+  border-radius: 50%;
+  width: 60px; height: 60px;
+  cursor: pointer;
+  z-index: 1001;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.add-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.25);
+}
+
+/* Popup */
+.popup {
+  display: none;
+  position: fixed;
+  top:0; left:0; right:0; bottom:0;
+  background: rgba(0,0,0,0.4);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+.popup-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 14px;
+  width: 320px;
+  max-height: 90vh;
+  overflow: auto;
+  position: relative;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+}
+.popup-content h3 {
+  margin-top: 0;
+  font-size: 18px;
+  color: #ff5722;
+}
+.popup-content img {
+  max-width: 100%;
+  height: 140px;
+  object-fit: contain;
+  margin-bottom: 10px;
+  border-radius: 8px;
+}
+.popup-content h4 {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  color: #444;
+}
+.popup-content span {
+  cursor: pointer;
+}
+
+/* ปุ่มใน popup */
+.btn {
+  margin: 6px 0;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  width: 100%;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn-withdraw { background: #f44336; color: #fff; }
+.btn-add { background: #4caf50; color: #fff; }
+.btn-edit { background: #2196f3; color: #fff; }
+.btn-delete { background: #9c27b0; color: #fff; }
+
+/* ตาราง log */
+.log-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+.log-table th, .log-table td {
+  border: 1px solid #ddd;
+  padding: 6px;
+  font-size: 13px;
+  text-align: center;
+}
+.log-table th {
+  background: #f7f7f7;
+  font-weight: bold;
+}
+
+/* Page content */
+.page {
+  padding: 14px;
+  margin-top: 70px;
+  margin-bottom: 80px;
+}
+
